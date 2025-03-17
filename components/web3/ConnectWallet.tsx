@@ -5,8 +5,11 @@ import { useWeb3 } from "@/lib/web3/provider"
 import { Button } from "@/components/ui/button"
 import { Wallet, Loader2, AlertCircle } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
+import { useOCAuth } from '@opencampus/ocid-connect-js';
 
 export default function ConnectWallet() {
+  const { ocAuth } = useOCAuth();
+
   const { isConnected, isConnecting, account, connectWallet, disconnectWallet } = useWeb3()
   const { getThemeValue } = useTheme()
   const [isWeb3Available, setIsWeb3Available] = useState(false)
@@ -25,6 +28,14 @@ export default function ConnectWallet() {
       console.error("Failed to connect wallet:", error)
     }
   }
+
+  const handleLogin = async () => {
+    try {
+      await ocAuth.signInWithRedirect({ state: 'opencampus' });
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+  };
 
   const handleDisconnect = () => {
     disconnectWallet()
@@ -63,11 +74,19 @@ export default function ConnectWallet() {
   }
 
   return (
+    <div className="flex  gap-2 items-center justify-center ">
     <Button className={`gap-2 ${getThemeValue("primary")}`} onClick={handleConnect} disabled={isConnecting}>
       {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
       <span className="hidden md:inline">Connect Wallet</span>
       <span className="md:hidden">Connect</span>
     </Button>
+
+    <Button className={`gap-2 bg-[#6c70e6] hover:bg-[#3237db]`} onClick={handleLogin} disabled={isConnecting}>
+      {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
+      <span className="hidden md:inline">OpenCampus</span>
+      <span className="md:hidden">Connect</span>
+    </Button>
+    </div>
   )
 }
 

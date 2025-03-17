@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+
 import { motion } from "framer-motion"
 import { ArrowRight, Calendar, Clock, TrendingUp, CheckCircle, ChevronRight, Plus } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -39,6 +40,14 @@ export default function Dashboard() {
     setIsClient(true)
     setIsWeb3Available(typeof window !== "undefined" && !!window.ethereum)
   }, [])
+
+  const handleLogin = async () => {
+    try {
+      await ocAuth.signInWithRedirect({ state: 'opencampus' });
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+  };
 
   // Mock tasks for demonstration
   const mockTasks = [
@@ -126,411 +135,404 @@ export default function Dashboard() {
   }
 
   return (
-    <div>
-      <h1>Welcome to My App</h1>
-      {authState.isAuthenticated ? (
-        <p>You are logged in! {JSON.stringify(ocAuth.getAuthState())}</p>
+  
+    <DashboardLayout>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left column - Tasks */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold dark:text-white">Your Tasks</h2>
+            <Button asChild className={`gap-2 ${getThemeValue('primary')}`}>
+              <Link href="/create-task">
+                <Plus className="h-4 w-4" />
+                New Task
+              </Link>
+            </Button>
+          </div>
+          
+          <Tabs defaultValue="active" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="all">All Tasks</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="active" className="space-y-4">
+              {mockTasks.filter(task => task.status !== 'completed').map((task, index) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <Card className={`overflow-hidden ${getBorderRadius()}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg dark:text-white">{task.name}</CardTitle>
+                          <CardDescription>{task.description}</CardDescription>
+                        </div>
+                        <Badge className={task.status === 'in-progress' ? 'bg-blue-500' : getThemeValue('primary')}>
+                          {task.status === 'in-progress' ? 'In Progress' : 'At Risk'}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-sm dark:text-slate-300">Due: {task.deadline.toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-sm dark:text-slate-300">{getDaysLeft(task.deadline)} days left</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-sm dark:text-slate-300">Staked: {task.stakeAmount} ETH</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="dark:text-slate-400">Progress</span>
+                          <span className="font-medium dark:text-white">{task.progress}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${getThemeValue('primary')} rounded-full`} 
+                            style={{ width: `${task.progress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between pt-2">
+                      <div className="flex -space-x-2">
+                        <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
+                          <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                          <AvatarFallback>JD</AvatarFallback>
+                        </Avatar>
+                        {task.collaborators > 0 && (
+                          <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
+                            <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                            <AvatarFallback>SM</AvatarFallback>
+                          </Avatar>
+                        )}
+                        {task.collaborators > 1 && (
+                          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 text-xs">
+                            +{task.collaborators}
+                          </div>
+                        )}
+                      </div>
+                      <Button asChild size="sm" className={`gap-1 ${getThemeValue('primary')}`}>
+                        <Link href={`/task/${task.id}`}>
+                          View Details
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </motion.div>
+
+              ))}
+            </TabsContent>
+            
+            <TabsContent value="completed" className="space-y-4">
+              {mockTasks.filter(task => task.status === 'completed').map((task, index) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <Card className={`overflow-hidden ${getBorderRadius()}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg dark:text-white">{task.name}</CardTitle>
+                          <CardDescription>{task.description}</CardDescription>
+                        </div>
+                        <Badge className="bg-emerald-500">Completed</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-emerald-500" />
+                          <span className="text-sm dark:text-slate-300">Completed on time</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-sm dark:text-slate-300">Due: {task.deadline.toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-sm dark:text-slate-300">Earned: {task.stakeAmount} ETH</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="dark:text-slate-400">Progress</span>
+                          <span className="font-medium dark:text-white">{task.progress}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-emerald-500 rounded-full" 
+                            style={{ width: `${task.progress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between pt-2">
+                      <div className="flex -space-x-2">
+                        <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
+                          <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                          <AvatarFallback>JD</AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/task/${task.id}`}>
+                          View Details
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </motion.div>
+              ))}
+            </TabsContent>
+            
+            <TabsContent value="all" className="space-y-4">
+              {mockTasks.map((task, index) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <Card className={`overflow-hidden ${getBorderRadius()}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg dark:text-white">{task.name}</CardTitle>
+                          <CardDescription>{task.description}</CardDescription>
+                        </div>
+                        <Badge className={
+                          task.status === 'completed' 
+                            ? 'bg-emerald-500' 
+                            : task.status === 'in-progress' 
+                              ? 'bg-blue-500' 
+                              : getThemeValue('primary')
+                        }>
+                          {task.status === 'completed' 
+                            ? 'Completed' 
+                            : task.status === 'in-progress' 
+                              ? 'In Progress' 
+                              : 'At Risk'}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                          {task.status === 'completed' 
+                            ? <CheckCircle className="h-4 w-4 text-emerald-500" />
+                            : <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          }
+                          <span className="text-sm dark:text-slate-300">
+                            {task.status === 'completed' 
+                              ? 'Completed on time' 
+                              : `Due: ${task.deadline.toLocaleDateString()}`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-sm dark:text-slate-300">
+                            {task.status === 'completed' 
+                              ? `Completed: ${task.deadline.toLocaleDateString()}` 
+                              : `${getDaysLeft(task.deadline)} days left`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-sm dark:text-slate-300">
+                            {task.status === 'completed' 
+                              ? `Earned: ${task.stakeAmount} ETH` 
+                              : `Staked: ${task.stakeAmount} ETH`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="dark:text-slate-400">Progress</span>
+                          <span className="font-medium dark:text-white">{task.progress}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${task.status === 'completed' ? 'bg-emerald-500' : getThemeValue('primary')} rounded-full`} 
+                            style={{ width: `${task.progress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between pt-2">
+                      <div className="flex -space-x-2">
+                        <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
+                          <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                          <AvatarFallback>JD</AvatarFallback>
+                        </Avatar>
+                        {task.collaborators > 0 && (
+                          <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
+                            <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                            <AvatarFallback>SM</AvatarFallback>
+                          </Avatar>
+                        )}
+                        {task.collaborators > 1 && (
+                          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 text-xs">
+                            +{task.collaborators}
+                          </div>
+                        )}
+                      </div>
+                      <Button asChild size="sm" className={task.status === 'completed' ? 'bg-emerald-500 hover:bg-emerald-600' : getThemeValue('primary')}>
+                        <Link href={`/task/${task.id}`}>
+                          View Details
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </motion.div>
+              ))}
+            </TabsContent>
+          </Tabs>
+        </div>
         
-      ) : (
-        <LoginButton />
-      )}
-    </div>
-    // <DashboardLayout>
-    //   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    //     {/* Left column - Tasks */}
-    //     <div className="lg:col-span-2 space-y-6">
-    //       <div className="flex items-center justify-between">
-    //         <h2 className="text-2xl font-bold dark:text-white">Your Tasks</h2>
-    //         <Button asChild className={`gap-2 ${getThemeValue('primary')}`}>
-    //           <Link href="/create-task">
-    //             <Plus className="h-4 w-4" />
-    //             New Task
-    //           </Link>
-    //         </Button>
-    //       </div>
-          
-    //       <Tabs defaultValue="active" className="w-full">
-    //         <TabsList className="mb-4">
-    //           <TabsTrigger value="active">Active</TabsTrigger>
-    //           <TabsTrigger value="completed">Completed</TabsTrigger>
-    //           <TabsTrigger value="all">All Tasks</TabsTrigger>
-    //         </TabsList>
-            
-    //         <TabsContent value="active" className="space-y-4">
-    //           {mockTasks.filter(task => task.status !== 'completed').map((task, index) => (
-    //             <motion.div
-    //               key={task.id}
-    //               initial={{ opacity: 0, y: 20 }}
-    //               animate={{ opacity: 1, y: 0 }}
-    //               transition={{ duration: 0.3, delay: index * 0.1 }}
-    //             >
-    //               <Card className={`overflow-hidden ${getBorderRadius()}`}>
-    //                 <CardHeader className="pb-2">
-    //                   <div className="flex items-start justify-between">
-    //                     <div className="space-y-1">
-    //                       <CardTitle className="text-lg dark:text-white">{task.name}</CardTitle>
-    //                       <CardDescription>{task.description}</CardDescription>
-    //                     </div>
-    //                     <Badge className={task.status === 'in-progress' ? 'bg-blue-500' : getThemeValue('primary')}>
-    //                       {task.status === 'in-progress' ? 'In Progress' : 'At Risk'}
-    //                     </Badge>
-    //                   </div>
-    //                 </CardHeader>
-    //                 <CardContent className="pb-2">
-    //                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-    //                     <div className="flex items-center gap-2">
-    //                       <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-    //                       <span className="text-sm dark:text-slate-300">Due: {task.deadline.toLocaleDateString()}</span>
-    //                     </div>
-    //                     <div className="flex items-center gap-2">
-    //                       <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-    //                       <span className="text-sm dark:text-slate-300">{getDaysLeft(task.deadline)} days left</span>
-    //                     </div>
-    //                     <div className="flex items-center gap-2">
-    //                       <TrendingUp className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-    //                       <span className="text-sm dark:text-slate-300">Staked: {task.stakeAmount} ETH</span>
-    //                     </div>
-    //                   </div>
-
-    //                   <div className="space-y-1">
-    //                     <div className="flex items-center justify-between text-sm">
-    //                       <span className="dark:text-slate-400">Progress</span>
-    //                       <span className="font-medium dark:text-white">{task.progress}%</span>
-    //                     </div>
-    //                     <div className="h-2 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-    //                       <div 
-    //                         className={`h-full ${getThemeValue('primary')} rounded-full`} 
-    //                         style={{ width: `${task.progress}%` }}
-    //                       ></div>
-    //                     </div>
-    //                   </div>
-    //                 </CardContent>
-    //                 <CardFooter className="flex justify-between pt-2">
-    //                   <div className="flex -space-x-2">
-    //                     <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
-    //                       <AvatarImage src="/placeholder.svg?height=32&width=32" />
-    //                       <AvatarFallback>JD</AvatarFallback>
-    //                     </Avatar>
-    //                     {task.collaborators > 0 && (
-    //                       <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
-    //                         <AvatarImage src="/placeholder.svg?height=32&width=32" />
-    //                         <AvatarFallback>SM</AvatarFallback>
-    //                       </Avatar>
-    //                     )}
-    //                     {task.collaborators > 1 && (
-    //                       <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 text-xs">
-    //                         +{task.collaborators}
-    //                       </div>
-    //                     )}
-    //                   </div>
-    //                   <Button asChild size="sm" className={`gap-1 ${getThemeValue('primary')}`}>
-    //                     <Link href={`/task/${task.id}`}>
-    //                       View Details
-    //                       <ChevronRight className="h-4 w-4" />
-    //                     </Link>
-    //                   </Button>
-    //                 </CardFooter>
-    //               </Card>
-    //             </motion.div>
-    //           ))}
-    //         </TabsContent>
-            
-    //         <TabsContent value="completed" className="space-y-4">
-    //           {mockTasks.filter(task => task.status === 'completed').map((task, index) => (
-    //             <motion.div
-    //               key={task.id}
-    //               initial={{ opacity: 0, y: 20 }}
-    //               animate={{ opacity: 1, y: 0 }}
-    //               transition={{ duration: 0.3, delay: index * 0.1 }}
-    //             >
-    //               <Card className={`overflow-hidden ${getBorderRadius()}`}>
-    //                 <CardHeader className="pb-2">
-    //                   <div className="flex items-start justify-between">
-    //                     <div className="space-y-1">
-    //                       <CardTitle className="text-lg dark:text-white">{task.name}</CardTitle>
-    //                       <CardDescription>{task.description}</CardDescription>
-    //                     </div>
-    //                     <Badge className="bg-emerald-500">Completed</Badge>
-    //                   </div>
-    //                 </CardHeader>
-    //                 <CardContent className="pb-2">
-    //                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-    //                     <div className="flex items-center gap-2">
-    //                       <CheckCircle className="h-4 w-4 text-emerald-500" />
-    //                       <span className="text-sm dark:text-slate-300">Completed on time</span>
-    //                     </div>
-    //                     <div className="flex items-center gap-2">
-    //                       <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-    //                       <span className="text-sm dark:text-slate-300">Due: {task.deadline.toLocaleDateString()}</span>
-    //                     </div>
-    //                     <div className="flex items-center gap-2">
-    //                       <TrendingUp className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-    //                       <span className="text-sm dark:text-slate-300">Earned: {task.stakeAmount} ETH</span>
-    //                     </div>
-    //                   </div>
-
-    //                   <div className="space-y-1">
-    //                     <div className="flex items-center justify-between text-sm">
-    //                       <span className="dark:text-slate-400">Progress</span>
-    //                       <span className="font-medium dark:text-white">{task.progress}%</span>
-    //                     </div>
-    //                     <div className="h-2 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-    //                       <div 
-    //                         className="h-full bg-emerald-500 rounded-full" 
-    //                         style={{ width: `${task.progress}%` }}
-    //                       ></div>
-    //                     </div>
-    //                   </div>
-    //                 </CardContent>
-    //                 <CardFooter className="flex justify-between pt-2">
-    //                   <div className="flex -space-x-2">
-    //                     <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
-    //                       <AvatarImage src="/placeholder.svg?height=32&width=32" />
-    //                       <AvatarFallback>JD</AvatarFallback>
-    //                     </Avatar>
-    //                   </div>
-    //                   <Button asChild size="sm" variant="outline">
-    //                     <Link href={`/task/${task.id}`}>
-    //                       View Details
-    //                       <ChevronRight className="h-4 w-4 ml-1" />
-    //                     </Link>
-    //                   </Button>
-    //                 </CardFooter>
-    //               </Card>
-    //             </motion.div>
-    //           ))}
-    //         </TabsContent>
-            
-    //         <TabsContent value="all" className="space-y-4">
-    //           {mockTasks.map((task, index) => (
-    //             <motion.div
-    //               key={task.id}
-    //               initial={{ opacity: 0, y: 20 }}
-    //               animate={{ opacity: 1, y: 0 }}
-    //               transition={{ duration: 0.3, delay: index * 0.1 }}
-    //             >
-    //               <Card className={`overflow-hidden ${getBorderRadius()}`}>
-    //                 <CardHeader className="pb-2">
-    //                   <div className="flex items-start justify-between">
-    //                     <div className="space-y-1">
-    //                       <CardTitle className="text-lg dark:text-white">{task.name}</CardTitle>
-    //                       <CardDescription>{task.description}</CardDescription>
-    //                     </div>
-    //                     <Badge className={
-    //                       task.status === 'completed' 
-    //                         ? 'bg-emerald-500' 
-    //                         : task.status === 'in-progress' 
-    //                           ? 'bg-blue-500' 
-    //                           : getThemeValue('primary')
-    //                     }>
-    //                       {task.status === 'completed' 
-    //                         ? 'Completed' 
-    //                         : task.status === 'in-progress' 
-    //                           ? 'In Progress' 
-    //                           : 'At Risk'}
-    //                     </Badge>
-    //                   </div>
-    //                 </CardHeader>
-    //                 <CardContent className="pb-2">
-    //                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-    //                     <div className="flex items-center gap-2">
-    //                       {task.status === 'completed' 
-    //                         ? <CheckCircle className="h-4 w-4 text-emerald-500" />
-    //                         : <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-    //                       }
-    //                       <span className="text-sm dark:text-slate-300">
-    //                         {task.status === 'completed' 
-    //                           ? 'Completed on time' 
-    //                           : `Due: ${task.deadline.toLocaleDateString()}`}
-    //                       </span>
-    //                     </div>
-    //                     <div className="flex items-center gap-2">
-    //                       <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-    //                       <span className="text-sm dark:text-slate-300">
-    //                         {task.status === 'completed' 
-    //                           ? `Completed: ${task.deadline.toLocaleDateString()}` 
-    //                           : `${getDaysLeft(task.deadline)} days left`}
-    //                       </span>
-    //                     </div>
-    //                     <div className="flex items-center gap-2">
-    //                       <TrendingUp className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-    //                       <span className="text-sm dark:text-slate-300">
-    //                         {task.status === 'completed' 
-    //                           ? `Earned: ${task.stakeAmount} ETH` 
-    //                           : `Staked: ${task.stakeAmount} ETH`}
-    //                       </span>
-    //                     </div>
-    //                   </div>
-
-    //                   <div className="space-y-1">
-    //                     <div className="flex items-center justify-between text-sm">
-    //                       <span className="dark:text-slate-400">Progress</span>
-    //                       <span className="font-medium dark:text-white">{task.progress}%</span>
-    //                     </div>
-    //                     <div className="h-2 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-    //                       <div 
-    //                         className={`h-full ${task.status === 'completed' ? 'bg-emerald-500' : getThemeValue('primary')} rounded-full`} 
-    //                         style={{ width: `${task.progress}%` }}
-    //                       ></div>
-    //                     </div>
-    //                   </div>
-    //                 </CardContent>
-    //                 <CardFooter className="flex justify-between pt-2">
-    //                   <div className="flex -space-x-2">
-    //                     <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
-    //                       <AvatarImage src="/placeholder.svg?height=32&width=32" />
-    //                       <AvatarFallback>JD</AvatarFallback>
-    //                     </Avatar>
-    //                     {task.collaborators > 0 && (
-    //                       <Avatar className="border-2 border-white dark:border-slate-900 h-8 w-8">
-    //                         <AvatarImage src="/placeholder.svg?height=32&width=32" />
-    //                         <AvatarFallback>SM</AvatarFallback>
-    //                       </Avatar>
-    //                     )}
-    //                     {task.collaborators > 1 && (
-    //                       <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 text-xs">
-    //                         +{task.collaborators}
-    //                       </div>
-    //                     )}
-    //                   </div>
-    //                   <Button asChild size="sm" className={task.status === 'completed' ? 'bg-emerald-500 hover:bg-emerald-600' : getThemeValue('primary')}>
-    //                     <Link href={`/task/${task.id}`}>
-    //                       View Details
-    //                       <ChevronRight className="h-4 w-4 ml-1" />
-    //                     </Link>
-    //                   </Button>
-    //                 </CardFooter>
-    //               </Card>
-    //             </motion.div>
-    //           ))}
-    //         </TabsContent>
-    //       </Tabs>
-    //     </div>
-        
-    //     {/* Right column - Stats */}
-    //     <div className="space-y-6">
-    //       <Card className={getBorderRadius()}>
-    //         <CardHeader>
-    //           <CardTitle>Staking Summary</CardTitle>
-    //           <CardDescription>Your current stakes and rewards</CardDescription>
-    //         </CardHeader>
-    //         <CardContent className="space-y-4">
-    //           <div className={`flex items-center justify-between p-4 ${getThemeValue('primaryLight')} rounded-lg`}>
-    //             <div className="flex items-center gap-3">
-    //               <div className={`p-2 ${getThemeValue('primary')} rounded-full`}>
-    //                 <TrendingUp className="h-5 w-5 text-white" />
-    //               </div>
-    //               <div>
-    //                 <p className="font-medium dark:text-slate-900">Total Staked</p>
-    //                 <p className="text-sm text-slate-500 dark:text-slate-700">Across all tasks</p>
-    //               </div>
-    //             </div>
-    //             <div className="text-right">
-    //               <p className="text-xl font-bold dark:text-slate-900">0.75 ETH</p>
-    //               <div className="flex items-center justify-end gap-1 text-emerald-500 dark:text-emerald-600">
-    //                 <ArrowRight className="h-3 w-3" />
-    //                 <span className="text-xs">+0.25 ETH this month</span>
-    //               </div>
-    //             </div>
-    //           </div>
+        {/* Right column - Stats */}
+        <div className="space-y-6">
+          <Card className={getBorderRadius()}>
+            <CardHeader>
+              <CardTitle>Staking Summary</CardTitle>
+              <CardDescription>Your current stakes and rewards</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className={`flex items-center justify-between p-4 ${getThemeValue('primaryLight')} rounded-lg`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 ${getThemeValue('primary')} rounded-full`}>
+                    <TrendingUp className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium dark:text-slate-900">Total Staked</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-700">Across all tasks</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold dark:text-slate-900">0.75 ETH</p>
+                  <div className="flex items-center justify-end gap-1 text-emerald-500 dark:text-emerald-600">
+                    <ArrowRight className="h-3 w-3" />
+                    <span className="text-xs">+0.25 ETH this month</span>
+                  </div>
+                </div>
+              </div>
               
-    //           <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-    //             <div className="flex items-center justify-between mb-2">
-    //               <p className="font-medium dark:text-white">Current Streak</p>
-    //               <Badge className={getThemeValue('primary')}>12 days</Badge>
-    //             </div>
-    //             <div className="space-y-2">
-    //               <div className="flex justify-between text-sm">
-    //                 <span className="text-gray-500 dark:text-gray-400">12/30 days</span>
-    //                 <span className="font-medium dark:text-white">40%</span>
-    //               </div>
-    //               <div className="h-2 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-    //                 <div 
-    //                   className={`h-full ${getThemeValue('primary')} rounded-full`} 
-    //                   style={{ width: '40%' }}
-    //                 ></div>
-    //               </div>
-    //               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-    //                 <span>Reward: 0.5 ETH</span>
-    //                 <span>18 days left</span>
-    //               </div>
-    //             </div>
-    //           </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-medium dark:text-white">Current Streak</p>
+                  <Badge className={getThemeValue('primary')}>12 days</Badge>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">12/30 days</span>
+                    <span className="font-medium dark:text-white">40%</span>
+                  </div>
+                  <div className="h-2 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${getThemeValue('primary')} rounded-full`} 
+                      style={{ width: '40%' }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>Reward: 0.5 ETH</span>
+                    <span>18 days left</span>
+                  </div>
+                </div>
+              </div>
               
-    //           <Button asChild className={`w-full ${getThemeValue('primary')}`}>
-    //             <Link href="/staking">
-    //               View Staking Details
-    //               <ArrowRight className="h-4 w-4 ml-2" />
-    //             </Link>
-    //           </Button>
-    //         </CardContent>
-    //       </Card>
+              <Button asChild className={`w-full ${getThemeValue('primary')}`}>
+                <Link href="/staking">
+                  View Staking Details
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
           
-    //       <Card className={getBorderRadius()}>
-    //         <CardHeader>
-    //           <CardTitle>Upcoming Deadlines</CardTitle>
-    //           <CardDescription>Tasks due in the next 7 days</CardDescription>
-    //         </CardHeader>
-    //         <CardContent className="space-y-4">
-    //           {mockTasks
-    //             .filter(task => task.status !== 'completed' && getDaysLeft(task.deadline) <= 7)
-    //             .map((task, index) => (
-    //               <div key={index} className="flex items-center justify-between p-3 border rounded-lg dark:border-slate-700">
-    //                 <div>
-    //                   <p className="font-medium dark:text-white">{task.name}</p>
-    //                   <div className="flex items-center gap-2 mt-1">
-    //                     <Clock className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-    //                     <span className="text-xs text-gray-500 dark:text-gray-400">
-    //                       {getDaysLeft(task.deadline) === 0 
-    //                         ? 'Due today!' 
-    //                         : `${getDaysLeft(task.deadline)} days left`}
-    //                     </span>
-    //                   </div>
-    //                 </div>
-    //                 <Badge className={getDaysLeft(task.deadline) <= 2 ? 'bg-red-500' : 'bg-amber-500'}>
-    //                   {getDaysLeft(task.deadline) <= 2 ? 'Urgent' : 'Soon'}
-    //                 </Badge>
-    //               </div>
-    //             ))}
+          <Card className={getBorderRadius()}>
+            <CardHeader>
+              <CardTitle>Upcoming Deadlines</CardTitle>
+              <CardDescription>Tasks due in the next 7 days</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {mockTasks
+                .filter(task => task.status !== 'completed' && getDaysLeft(task.deadline) <= 7)
+                .map((task, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg dark:border-slate-700">
+                    <div>
+                      <p className="font-medium dark:text-white">{task.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {getDaysLeft(task.deadline) === 0 
+                            ? 'Due today!' 
+                            : `${getDaysLeft(task.deadline)} days left`}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge className={getDaysLeft(task.deadline) <= 2 ? 'bg-red-500' : 'bg-amber-500'}>
+                      {getDaysLeft(task.deadline) <= 2 ? 'Urgent' : 'Soon'}
+                    </Badge>
+                  </div>
+                ))}
               
-    //           {mockTasks.filter(task => task.status !== 'completed' && getDaysLeft(task.deadline) <= 7).length === 0 && (
-    //             <div className="text-center p-4">
-    //               <CheckCircle className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-    //               <p className="font-medium dark:text-white">No urgent deadlines</p>
-    //               <p className="text-sm text-gray-500 dark:text-gray-400">You're all caught up!</p>
-    //             </div>
-    //           )}
-    //         </CardContent>
-    //       </Card>
+              {mockTasks.filter(task => task.status !== 'completed' && getDaysLeft(task.deadline) <= 7).length === 0 && (
+                <div className="text-center p-4">
+                  <CheckCircle className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                  <p className="font-medium dark:text-white">No urgent deadlines</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">You're all caught up!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
           
-    //       <Card className={getBorderRadius()}>
-    //         <CardHeader>
-    //           <CardTitle>Quick Actions</CardTitle>
-    //           <CardDescription>Frequently used features</CardDescription>
-    //         </CardHeader>
-    //         <CardContent className="space-y-2">
-    //           <Button asChild className={`w-full justify-start`}>
-    //             <Link href="/create-task">
-    //               <Plus className="h-4 w-4 mr-2" />
-    //               Create New Task
-    //             </Link>
-    //           </Button>
-    //           <Button asChild variant="outline" className="w-full bg-white justify-start">
-    //             <Link href="/leaderboard">
-    //               <TrendingUp className="h-4 w-4 mr-2" />
-    //               View Leaderboard
-    //             </Link>
-    //           </Button>
-    //           <Button asChild variant="outline" className="w-full bg-white justify-start">
-    //             <Link href="/calendar"> 
-    //               <Calendar className="h-4 w-4 mr-2" />
-    //               Open Calendar
-    //             </Link>
-    //           </Button>
-    //         </CardContent>
-    //       </Card>
-    //     </div>
-    //   </div>
-    // </DashboardLayout>
+          <Card className={getBorderRadius()}>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Frequently used features</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button asChild className={`w-full justify-start`}>
+                <Link href="/create-task">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Task
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full bg-white justify-start">
+                <Link href="/leaderboard">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  View Leaderboard
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full bg-white justify-start">
+                <Link href="/calendar"> 
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Open Calendar
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </DashboardLayout>
   )
   }

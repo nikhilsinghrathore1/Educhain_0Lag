@@ -52,8 +52,7 @@ const borderRadiusMap = {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
-  const { theme, setThemeColor, setBorderRadius, setMode, getThemeValue, getBorderRadius } = useTheme()
-  const { isConnected } = useWeb3()
+  const { theme, setThemeColor, setBorderRadius, setMode, getThemeValue } = useTheme()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isClient, setIsClient] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)

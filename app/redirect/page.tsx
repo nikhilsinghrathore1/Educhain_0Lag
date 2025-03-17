@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 export default function RedirectPage() {
   const router = useRouter();
 
+  
+
   const loginSuccess = () => {
     router.push('/'); // Redirect after successful login
   };
